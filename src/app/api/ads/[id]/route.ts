@@ -5,13 +5,15 @@ const prisma = new PrismaClient();
   
 export async function GET(  
   request: NextRequest,  
-  { params }: { params: { id: string } }  
+  { params }: { params: Promise<{ id: string }> }  
 ) {  
+  const { id } = await params; // AWAIT aqui!  
+    
   const ad = await prisma.ad.findUnique({  
-    where: { id: params.id },  
+    where: { id },  
     include: {  
       task: true,  
-      metrics: true  // CORRIGIDO: era 'metricas'  
+      metrics: true  
     }  
   });  
   
@@ -24,12 +26,13 @@ export async function GET(
   
 export async function PATCH(  
   request: NextRequest,  
-  { params }: { params: { id: string } }  
+  { params }: { params: Promise<{ id: string }> }  
 ) {  
+  const { id } = await params; // AWAIT aqui!  
   const body = await request.json();  
   
   const ad = await prisma.ad.update({  
-    where: { id: params.id },  
+    where: { id },  
     data: body  
   });  
   
@@ -38,10 +41,12 @@ export async function PATCH(
   
 export async function DELETE(  
   request: NextRequest,  
-  { params }: { params: { id: string } }  
+  { params }: { params: Promise<{ id: string }> }  
 ) {  
+  const { id } = await params; // AWAIT aqui!  
+  
   await prisma.ad.delete({  
-    where: { id: params.id }  
+    where: { id }  
   });  
   
   return NextResponse.json({ success: true });  

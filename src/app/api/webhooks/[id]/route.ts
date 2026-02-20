@@ -3,48 +3,20 @@ import { PrismaClient } from '@/generated/prisma';
   
 const prisma = new PrismaClient();  
   
-export async function GET(  
-  request: NextRequest,  
-  { params }: { params: { id: string } }  
-) {  
-  const webhook = await prisma.webhook.findUnique({  
-    where: { id: params.id },  
-    include: {  
-      logs: {  
-        orderBy: { criadoEm: 'desc' },  
-        take: 50  
-      }  
-    }  
+export async function GET() {  
+  const webhooks = await prisma.webhook.findMany({  
+    orderBy: { criadoEm: 'desc' }  
   });  
-    
-  if (!webhook) {  
-    return NextResponse.json({ error: 'Webhook não encontrado' }, { status: 404 });  
-  }  
-    
-  return NextResponse.json(webhook);  
+  
+  return NextResponse.json(webhooks);  
 }  
   
-export async function PATCH(  
-  request: NextRequest,  
-  { params }: { params: { id: string } }  
-) {  
+export async function POST(request: NextRequest) {  
   const body = await request.json();  
-    
-  const webhook = await prisma.webhook.update({  
-    where: { id: params.id },  
+  
+  const webhook = await prisma.webhook.create({  
     data: body  
   });  
-    
-  return NextResponse.json(webhook);  
-}  
   
-export async function DELETE(  
-  request: NextRequest,  
-  { params }: { params: { id: string } }  
-) {  
-  await prisma.webhook.delete({  
-    where: { id: params.id }  
-  });  
-    
-  return NextResponse.json({ success: true });  
+  return NextResponse.json(webhook);  
 }

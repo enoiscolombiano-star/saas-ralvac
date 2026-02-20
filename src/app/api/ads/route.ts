@@ -18,7 +18,8 @@ export async function GET(request: NextRequest) {
         include: {  
           utmConfigs: true  
         }  
-      }  
+      },  
+      metrics: true  
     },  
     orderBy: { criadoEm: 'desc' }  
   });  
@@ -32,24 +33,27 @@ export async function POST(request: NextRequest) {
   
   const task = await prisma.task.findUnique({  
     where: { id: taskId },  
-    include: { utmConfigs: true }  
+    include: {  
+      utmConfigs: true  
+    }  
   });  
   
-  if (!task || !task.utmConfigs) {  
-    return NextResponse.json({ error: 'Task ou UTM config não encontrada' }, { status: 404 });  
+  if (!task) {  
+    return NextResponse.json({ error: 'Tarefa não encontrada' }, { status: 404 });  
   }  
   
-  const utmConfig = task.utmConfigs;  
-  
-  const linkGerado = generateUTMLink(linkOriginal, {  
-    campaignName: utmConfig.campaignName,  // CORRIGIDO: era 'campaign'  
-    funcao: utmConfig.funcao,  
-    copy: utmConfig.copy,  
-    lead: utmConfig.lead,  
-    editor: utmConfig.editor,  
-    hook: utmConfig.hook,  
-    persona: utmConfig.persona  
-  });  
+  // CORREÇÃO: Acessar o primeiro elemento do array  
+  const utmConfig = task.utmConfigs[0];  
+    
+  const linkGerado = utmConfig ? generateUTMLink(linkOriginal, {  
+    campaignName: utmConfig.campaignName,  
+    funcao: utmConfig.funcao || '',  
+    copy: utmConfig.copy || '',  
+    lead: utmConfig.lead || '',  
+    editor: utmConfig.editor || '',  
+    hook: utmConfig.hook || '',  
+    persona: utmConfig.persona || ''  
+  }) : linkOriginal;  
   
   const ad = await prisma.ad.create({  
     data: {  
@@ -59,9 +63,6 @@ export async function POST(request: NextRequest) {
       linkOriginal,  
       linkGerado,  
       status: 'RASCUNHO'  
-    },  
-    include: {  
-      task: true  
     }  
   });  
   
