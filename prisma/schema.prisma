@@ -1,14 +1,31 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
-generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
-}
-
-datasource db {
-  provider = "postgresql"
+generator client {  
+  provider = "prisma-client-js"  
+  output   = "../src/generated/prisma"  
+}  
+  
+datasource db {  
+  provider = "postgresql"  
+  url      = env("DATABASE_URL")  
+}  
+  
+enum TaskStatus {  
+  CRIADA  
+  EM_PRODUCAO  
+  PRONTA_PARA_TESTES  
+}  
+  
+model Task {  
+  id           String     @id @default(cuid())  
+  nomeCompleto String     @map("nome_completo")  
+  prefixo      String  
+  status       TaskStatus @default(CRIADA)  
+  criadoPor    String?    @map("criado_por")  
+  comQuem      String?    @map("com_quem")  
+  prazo        DateTime?  
+  criadoEm     DateTime   @default(now()) @map("criado_em")  
+  atualizadoEm DateTime   @updatedAt @map("atualizado_em")  
+  
+  @@index([status])  
+  @@index([criadoEm])  
+  @@map("tasks")  
 }
