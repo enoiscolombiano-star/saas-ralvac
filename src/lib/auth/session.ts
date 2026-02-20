@@ -1,25 +1,22 @@
 import { PrismaClient } from '@/generated/prisma';  
-import { randomBytes } from 'crypto';  
   
 const prisma = new PrismaClient();  
   
-export async function createSession(userId: string) {  
-  const token = randomBytes(32).toString('hex');  
-  const expiresAt = new Date();  
-  expiresAt.setDate(expiresAt.getDate() + 7); // 7 dias  
-  
+export async function createSession(userId: string): Promise<string> {  
+  const sessionToken = crypto.randomUUID();  
+    
   await prisma.session.create({  
     data: {  
       userId,  
-      token,  
-      expiresAt  
+      token: sessionToken,  
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 dias  
     }  
   });  
   
-  return token;  
+  return sessionToken;  
 }  
   
-export async function verifySession(token: string) {  // ADICIONADO: export  
+export async function verifySession(token: string) {  
   const session = await prisma.session.findUnique({  
     where: { token },  
     include: { user: true }  
@@ -32,7 +29,8 @@ export async function verifySession(token: string) {  // ADICIONADO: export
   return session;  
 }  
   
-export async function deleteSession(token: string) {  
+// ADICIONADO: função deleteSession que estava faltando  
+export async function deleteSession(token: string): Promise<void> {  
   await prisma.session.delete({  
     where: { token }  
   });  

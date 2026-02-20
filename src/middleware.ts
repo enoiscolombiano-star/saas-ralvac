@@ -4,44 +4,39 @@ import { verifySession } from '@/lib/auth/session';
 export async function middleware(request: NextRequest) {  
   const token = request.cookies.get('session')?.value;  
   
-  // Rotas públicas que não precisam de autenticação  
   const publicPaths = ['/login', '/'];  
-  const isPublicPath = publicPaths.some(path =>   
-    request.nextUrl.pathname.startsWith(path)  
-  );  
+  const isPublicPath = publicPaths.includes(request.nextUrl.pathname);  
   
-  if (isPublicPath) {  
-    return NextResponse.next();  
-  }  
-  
-  // Verificar sessão  
-  if (!token) {  
+  if (!token && !isPublicPath) {  
     return NextResponse.redirect(new URL('/login', request.url));  
   }  
   
-  const session = await verifySession(token);  
-  if (!session) {  
-    const response = NextResponse.redirect(new URL('/login', request.url));  
-    response.cookies.delete('session');  
-    return response;  
+  if (token) {  
+    const session = await verifySession(token);  // CORRIGIDO: retorna objeto ou null  
+  
+    if (!session) {  
+      const response = NextResponse.redirect(new URL('/login', request.url));  
+      response.cookies.delete('session');  
+      return response;  
+    }  
+  
+    // CORRIGIDO: agora session é um objeto, não 'true'  
+    const requestHeaders = new Headers(request.headers);  
+    requestHeaders.set('x-user-id', session.userId);  
+    requestHeaders.set('x-user-role', session.user.role);  
+  
+    return NextResponse.next({  
+      request: {  
+        headers: requestHeaders  
+      }  
+    });  
   }  
   
-  // Adicionar informações do usuário aos headers  
-  const response = NextResponse.next();  
-  response.headers.set('x-user-id', session.userId);  
-  response.headers.set('x-user-role', session.user.role);  
-  
-  return response;  
+  return NextResponse.next();  
 }  
   
 export const config = {  
   matcher: [  
-    '/kanban/:path*',  
-    '/definicoes/:path*',  
-    '/webhooks/:path*',  
-    '/veicular/:path*',  
-    '/dashboard/:path*',  
-    '/perfil/:path*',  
-    '/api/:path*'  
-  ]  
+    '/((?!api|_next/static|_next/image|favicon.ico).*)',  
+  ],  
 };

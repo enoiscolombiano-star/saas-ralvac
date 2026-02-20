@@ -1,40 +1,25 @@
-import { PrismaClient, AuditAction } from '@/generated/prisma';  
+import { PrismaClient } from '@/generated/prisma';  
   
 const prisma = new PrismaClient();  
   
-type AuditLogData = {  
-  userId?: string;  
+type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE';  
+  
+export async function logAudit(params: {  
+  userId: string;  
   action: AuditAction;  
   entityType: string;  
-  entityId?: string;  
+  entityId: string;  
   changes?: Record<string, any>;  
-  ipAddress?: string;  
-  userAgent?: string;  
-};  
+}) {  
+  const { userId, action, entityType, entityId, changes } = params;  
   
-export async function createAuditLog(data: AuditLogData) {  
-  try {  
-    await prisma.auditLog.create({  
-      data: {  
-        userId: data.userId,  
-        action: data.action,  
-        entityType: data.entityType,  
-        entityId: data.entityId,  
-        changes: data.changes ? JSON.stringify(data.changes) : null,  
-        ipAddress: data.ipAddress,  
-        userAgent: data.userAgent  
-      }  
-    });  
-  } catch (error) {  
-    console.error('Erro ao criar log de auditoria:', error);  
-  }  
-}  
-  
-export function getClientInfo(request: Request) {  
-  return {  
-    ipAddress: request.headers.get('x-forwarded-for') ||   
-               request.headers.get('x-real-ip') ||   
-               'unknown',  
-    userAgent: request.headers.get('user-agent') || 'unknown'  
-  };  
+  await prisma.auditLog.create({  
+    data: {  
+      userId,  
+      action,  
+      entityType,  
+      entityId,  
+      changes: changes ? JSON.stringify(changes) : null  
+    }  
+  });  
 }

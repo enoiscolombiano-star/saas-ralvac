@@ -6,16 +6,12 @@ import AuditFilters from '@/components/audit/AuditFilters';
   
 type AuditLog = {  
   id: string;  
+  userId: string;  
   action: string;  
   entityType: string;  
-  entityId?: string;  
-  changes?: string;  
-  ipAddress?: string;  
-  criadoEm: string;  
-  user?: {  
-    nome: string;  
-    email: string;  
-  };  
+  entityId: string;  
+  changes: string | null;  
+  criadoEm: Date;  
 };  
   
 export default function HistoricoPage() {  
@@ -25,15 +21,12 @@ export default function HistoricoPage() {
     entityType: '',  
     action: ''  
   });  
-  const [loading, setLoading] = useState(true);  
   
   useEffect(() => {  
     fetchLogs();  
   }, [filters]);  
   
   const fetchLogs = async () => {  
-    setLoading(true);  
-      
     const params = new URLSearchParams();  
     if (filters.userId) params.append('userId', filters.userId);  
     if (filters.entityType) params.append('entityType', filters.entityType);  
@@ -41,25 +34,16 @@ export default function HistoricoPage() {
   
     const res = await fetch(`/api/audit-logs?${params.toString()}`);  
     const data = await res.json();  
-      
     setLogs(data);  
-    setLoading(false);  
   };  
   
   return (  
-    <div className="p-8">  
-      <h1 className="text-2xl font-bold mb-6">Histórico de Auditoria</h1>  
+    <div className="container mx-auto p-6">  
+      <h1 className="text-3xl font-bold mb-6">Histórico de Auditoria</h1>  
   
-      <AuditFilters   
-        filters={filters}  
-        onFilterChange={setFilters}  
-      />  
+      <AuditFilters filters={filters} onFilterChange={setFilters} />  
   
-      {loading ? (  
-        <div className="text-center py-8">Carregando...</div>  
-      ) : (  
-        <AuditLogTable logs={logs} />  
-      )}  
+      <AuditLogTable logs={logs} />  
     </div>  
   );  
 }

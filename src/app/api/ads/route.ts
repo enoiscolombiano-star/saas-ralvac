@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';  
 import { PrismaClient } from '@/generated/prisma';  
 import { dispatchWebhook } from '@/lib/webhook-dispatcher';  
+import { generateUTMLink } from '@/lib/utm/generator';  
   
 const prisma = new PrismaClient();  
   
@@ -13,8 +14,11 @@ export async function GET(request: NextRequest) {
   const ads = await prisma.ad.findMany({  
     where,  
     include: {  
-      task: true,  
-      metrics: true  // CORRIGIDO: era 'metricas'  
+      task: {  
+        include: {  
+          utmConfigs: true  
+        }  
+      }  
     },  
     orderBy: { criadoEm: 'desc' }  
   });  
@@ -24,50 +28,44 @@ export async function GET(request: NextRequest) {
   
 export async function POST(request: NextRequest) {  
   const body = await request.json();  
-  const { taskId, titulo, descricao, linkBase } = body;  
+  const { taskId, titulo, descricao, linkOriginal } = body;  
   
   const task = await prisma.task.findUnique({  
     where: { id: taskId },  
-    include: {  
-      utmConfigs: true,  
-      metrics: true  // CORRIGIDO: era 'metricas'  
-    }  
+    include: { utmConfigs: true }  
   });  
   
-  if (!task) {  
-    return NextResponse.json({ error: 'Tarefa não encontrada' }, { status: 404 });  
+  if (!task || !task.utmConfigs) {  
+    return NextResponse.json({ error: 'Task ou UTM config não encontrada' }, { status: 404 });  
   }  
   
-  // Gerar link UTM  
-  const utmConfig = task.utmConfigs[0];  
-  const utmParams = new URLSearchParams({  
-    utm_source: 'facebook',  
-    utm_medium: 'cpc',  
-    utm_campaign: utmConfig?.campaignName || task.prefixo,  
-    utm_content: utmConfig?.copy || '',  
-    utm_term: utmConfig?.persona || ''  
-  });  
+  const utmConfig = task.utmConfigs;  
   
-  const linkGerado = `${linkBase}?${utmParams.toString()}`;  
+  const linkGerado = generateUTMLink(linkOriginal, {  
+    campaignName: utmConfig.campaignName,  // CORRIGIDO: era 'campaign'  
+    funcao: utmConfig.funcao,  
+    copy: utmConfig.copy,  
+    lead: utmConfig.lead,  
+    editor: utmConfig.editor,  
+    hook: utmConfig.hook,  
+    persona: utmConfig.persona  
+  });  
   
   const ad = await prisma.ad.create({  
     data: {  
       taskId,  
       titulo,  
       descricao,  
+      linkOriginal,  
       linkGerado,  
       status: 'RASCUNHO'  
-      // REMOVIDO: linkVSL (não existe no schema)  
+    },  
+    include: {  
+      task: true  
     }  
   });  
   
-  // Disparar webhook  
-  await dispatchWebhook('AD_PUBLISHED', {  
-    adId: ad.id,  
-    taskId: task.id,  
-    titulo: ad.titulo,  
-    linkGerado: ad.linkGerado  
-  });  
+  await dispatchWebhook('AD_PUBLISHED', { ad });  
   
   return NextResponse.json(ad);  
 }
