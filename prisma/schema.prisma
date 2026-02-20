@@ -38,14 +38,6 @@ enum UserRole {
   VIEWER  
 }  
   
-enum AuditAction {  
-  CREATE  
-  UPDATE  
-  DELETE  
-  LOGIN  
-  LOGOUT  
-}  
-  
 model Task {  
   id           String     @id @default(cuid())  
   nomeCompleto String     @map("nome_completo")  
@@ -60,54 +52,54 @@ model Task {
   definition   TaskDefinition?  
   utmConfigs   UTMConfig[]  
   ads          Ad[]  
-  
+    
   @@index([status])  
   @@index([criadoEm])  
   @@map("tasks")  
 }  
   
 model TaskDefinition {  
-  id            String   @id @default(cuid())  
-  taskId        String   @unique @map("task_id")  
-  modeloAnuncio String   @map("modelo_anuncio")  
-  tipoEdicao    AdType   @map("tipo_edicao")  
-  criadoEm      DateTime @default(now()) @map("criado_em")  
-  atualizadoEm  DateTime @updatedAt @map("atualizado_em")  
+  id              String   @id @default(cuid())  
+  taskId          String   @unique @map("task_id")  
+  modeloAnuncio   String   @map("modelo_anuncio")  
+  tipoEdicao      AdType   @map("tipo_edicao")  
+  criadoEm        DateTime @default(now()) @map("criado_em")  
+  atualizadoEm    DateTime @updatedAt @map("atualizado_em")  
     
-  task          Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)  
+  task            Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)  
     
   @@map("task_definitions")  
 }  
   
 model UTMConfig {  
-  id           String   @id @default(cuid())  
-  taskId       String   @map("task_id")  
-  campaignName String   @map("campaign_name")  
-  funcao       String?  
-  copy         String?  
-  lead         String?  
-  editor       String?  
-  hook         String?  
-  persona      String?  
-  criadoEm     DateTime @default(now()) @map("criado_em")  
-  atualizadoEm DateTime @updatedAt @map("atualizado_em")  
+  id              String   @id @default(cuid())  
+  taskId          String   @map("task_id")  
+  campaignName    String   @map("campaign_name")  
+  funcao          String?  
+  copy            String?  
+  lead            String?  
+  editor          String?  
+  hook            String?  
+  persona         String?  
+  criadoEm        DateTime @default(now()) @map("criado_em")  
+  atualizadoEm    DateTime @updatedAt @map("atualizado_em")  
     
-  task         Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)  
+  task            Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)  
     
   @@index([taskId])  
   @@map("utm_configs")  
 }  
   
 model Webhook {  
-  id       String         @id @default(cuid())  
-  nome     String  
-  url      String  
-  eventos  String[]  
-  ativo    Boolean        @default(true)  
-  secret   String?  
-  criadoEm DateTime       @default(now()) @map("criado_em")  
+  id        String         @id @default(cuid())  
+  nome      String  
+  url       String  
+  eventos   WebhookEvent[]  
+  ativo     Boolean        @default(true)  
+  secret    String?  
+  criadoEm  DateTime       @default(now()) @map("criado_em")  
     
-  logs     WebhookLog[]  
+  logs      WebhookLog[]  
     
   @@map("webhooks")  
 }  
@@ -115,32 +107,28 @@ model Webhook {
 model WebhookLog {  
   id         String   @id @default(cuid())  
   webhookId  String   @map("webhook_id")  
-  evento     String  
-  payload    String   @db.Text  
-  statusCode Int?     @map("status_code")  
-  resposta   String?  @db.Text  
+  statusCode Int      @map("status_code")  
+  response   String?  
   criadoEm   DateTime @default(now()) @map("criado_em")  
     
-  webhook    Webhook  @relation(fields: [webhookId], references: [id], onDelete: Cascade)  
+  webhook    Webhook  @relation(fields: [webhookId], references: [id])  
     
-  @@index([webhookId])  
-  @@index([criadoEm])  
   @@map("webhook_logs")  
 }  
   
 model Ad {  
-  id          String     @id @default(cuid())  
-  taskId      String     @map("task_id")  
-  titulo      String  
-  descricao   String?    @db.Text  
-  linkGerado  String     @map("link_gerado")  
-  status      AdStatus   @default(RASCUNHO)  
-  veiculadoEm DateTime?  @map("veiculado_em")  
-  criadoEm    DateTime   @default(now()) @map("criado_em")  
+  id           String    @id @default(cuid())  
+  taskId       String    @map("task_id")  
+  titulo       String  
+  descricao    String?  
+  linkBase     String    @map("link_base")  
+  linkGerado   String    @map("link_gerado")  
+  status       AdStatus  @default(RASCUNHO)  
+  criadoEm     DateTime  @default(now()) @map("criado_em")  
   atualizadoEm DateTime  @updatedAt @map("atualizado_em")  
     
-  task        Task       @relation(fields: [taskId], references: [id], onDelete: Cascade)  
-  metrics     AdMetric[]  
+  task         Task      @relation(fields: [taskId], references: [id])  
+  metrics      AdMetric[]  
     
   @@index([taskId])  
   @@index([status])  
@@ -156,23 +144,22 @@ model AdMetric {
   gastoTotal Float    @default(0) @map("gasto_total")  
   criadoEm   DateTime @default(now()) @map("criado_em")  
     
-  ad         Ad       @relation(fields: [adId], references: [id], onDelete: Cascade)  
+  ad         Ad       @relation(fields: [adId], references: [id])  
     
   @@index([adId])  
-  @@index([criadoEm])  
   @@map("ad_metrics")  
 }  
   
 model User {  
-  id       String    @id @default(cuid())  
-  nome     String  
-  email    String    @unique  
-  senha    String  
-  role     UserRole  @default(VIEWER)  
-  ativo    Boolean   @default(true)  
-  criadoEm DateTime  @default(now()) @map("criado_em")  
+  id        String    @id @default(cuid())  
+  nome      String  
+  email     String    @unique  
+  senha     String  
+  role      UserRole  @default(VIEWER)  
+  ativo     Boolean   @default(true)  
+  criadoEm  DateTime  @default(now()) @map("criado_em")  
     
-  sessions Session[]  
+  sessions  Session[]  
   auditLogs AuditLog[]  
     
   @@map("users")  
@@ -185,28 +172,22 @@ model Session {
   expiresAt DateTime @map("expires_at")  
   criadoEm  DateTime @default(now()) @map("criado_em")  
     
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)  
+  user      User     @relation(fields: [userId], references: [id])  
     
-  @@index([userId])  
-  @@index([token])  
   @@map("sessions")  
 }  
   
 model AuditLog {  
-  id          String      @id @default(cuid())  
-  userId      String?     @map("user_id")  
-  action      AuditAction  
-  entityType  String      @map("entity_type")  
-  entityId    String?     @map("entity_id")  
-  changes     String?     @db.Text  
-  ipAddress   String?     @map("ip_address")  
-  userAgent   String?     @map("user_agent")  
-  criadoEm    DateTime    @default(now()) @map("criado_em")  
+  id         String   @id @default(cuid())  
+  userId     String   @map("user_id")  
+  entityType String   @map("entity_type")  
+  entityId   String   @map("entity_id")  
+  action     String  
+  changes    Json?  
+  criadoEm   DateTime @default(now()) @map("criado_em")  
     
-  user        User?       @relation(fields: [userId], references: [id], onDelete: SetNull)  
+  user       User     @relation(fields: [userId], references: [id])  
     
-  @@index([userId])  
-  @@index([entityType])  
-  @@index([criadoEm])  
+  @@index([entityType, entityId])  
   @@map("audit_logs")  
 }

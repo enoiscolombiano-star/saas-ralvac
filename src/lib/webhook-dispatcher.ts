@@ -2,7 +2,9 @@ import { PrismaClient } from '@/generated/prisma';
   
 const prisma = new PrismaClient();  
   
-export async function dispatchWebhook(event: string, payload: any) {  
+type WebhookEvent = 'TASK_CREATED' | 'TASK_UPDATED' | 'TASK_STATUS_CHANGED' | 'AD_PUBLISHED';  
+  
+export async function dispatchWebhook(event: WebhookEvent, data: any) {  
   const webhooks = await prisma.webhook.findMany({  
     where: {  
       ativo: true,  
@@ -14,36 +16,39 @@ export async function dispatchWebhook(event: string, payload: any) {
   
   for (const webhook of webhooks) {  
     try {  
+      const payload = {  
+        event,  
+        data,  
+        timestamp: new Date().toISOString()  
+      };  
+  
+      const headers: Record<string, string> = {  
+        'Content-Type': 'application/json'  
+      };  
+  
+      if (webhook.secret) {  
+        headers['X-Webhook-Secret'] = webhook.secret;  
+      }  
+  
       const response = await fetch(webhook.url, {  
         method: 'POST',  
-        headers: {  
-          'Content-Type': 'application/json',  
-          ...(webhook.secret && { 'X-Webhook-Secret': webhook.secret })  
-        },  
-        body: JSON.stringify({  
-          event,  
-          payload,  
-          timestamp: new Date().toISOString()  
-        })  
+        headers,  
+        body: JSON.stringify(payload)  
       });  
   
       await prisma.webhookLog.create({  
         data: {  
           webhookId: webhook.id,  
-          evento: event,  
-          payload,  
-          status: response.status,  // CORRIGIDO: era 'sucesso: true'  
-          resposta: await response.text()  
+          statusCode: response.status,  // CORRIGIDO: era 'status'  
+          response: JSON.stringify(await response.text())  
         }  
       });  
     } catch (error) {  
       await prisma.webhookLog.create({  
         data: {  
           webhookId: webhook.id,  
-          evento: event,  
-          payload,  
-          status: 500,  // CORRIGIDO: era 'sucesso: false'  
-          resposta: error instanceof Error ? error.message : 'Erro desconhecido'  
+          statusCode: 500,  // CORRIGIDO: era 'status'  
+          response: JSON.stringify({ error: String(error) })  
         }  
       });  
     }  
